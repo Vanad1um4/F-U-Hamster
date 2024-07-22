@@ -1,0 +1,48 @@
+{
+  "manifest_version": 3,
+  "name": "Fck U Hamster",
+  "version": "1.0",
+  "description": "Fck U Hamster",
+  "icons": {
+    "16": "images/main.png",
+    "48": "images/main.png",
+    "128": "images/main.png"
+  },
+  "permissions": [
+    "activeTab",
+    "scripting",
+    "sidePanel",
+    "storage"
+  ],
+  "host_permissions": [
+    "https://hamsterkombatgame.io/*",
+    "*://*.hamsterkombatgame.io/*",
+    "https://web.telegram.org/*"
+  ],
+  "content_scripts": [
+    {
+      "matches": [
+        "https://web.telegram.org/*"
+      ],
+      "js": [
+        "content_script.js"
+      ],
+      "css": [
+        "styles.css"
+      ],
+      "run_at": "document_start"
+    }
+  ],
+  "action": {
+    "default_title": "Open Side Panel",
+    "default_icon": {
+      "128": "images/main.png"
+    }
+  },
+  "side_panel": {
+    "default_path": "sidepanel.html"
+  },
+  "background": {
+    "service_worker": "background.js"
+  }
+}

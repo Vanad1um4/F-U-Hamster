@@ -1,0 +1,10 @@
+body {
+  font-family: Arial, sans-serif;
+  background-color: #2d2322;
+  padding: 20px;
+}
+
+.price-fraction {
+  color: white;
+  font-size: xx-large;
+}
