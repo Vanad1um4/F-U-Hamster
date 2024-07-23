@@ -1,10 +1,87 @@
 body {
-  font-family: Arial, sans-serif;
+  font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto;
   background-color: #2d2322;
-  padding: 20px;
+  height: 98vh;
+  --grid-cell-bg-color: #3f302f;
+  --grid-cell-border: 1px solid #b7b7b7;
+  --button-color: #28552a;
+  --border-radius: 5px;
 }
 
-.price-fraction {
+.main {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 1em;
+}
+
+.upgrade-stats {
+  display: flex;
+  gap: 1em;
+}
+
+.answer {
+  flex: 1;
+}
+
+/* BOOST CALCULATOR */
+
+.boost-fraction {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.parsed-text {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+  gap: 1em;
+  flex: 1;
+}
+
+.boost-scraped,
+.boost-parsed,
+.price-scraped,
+.price-parsed {
+  padding: 6px;
+  box-sizing: border-box;
+}
+
+.cell {
   color: white;
-  font-size: xx-large;
+  background-color: var(--grid-cell-bg-color);
+  border: var(--grid-cell-border);
+  border-radius: var(--border-radius);
+}
+
+.medium-cell {
+  font-size: 4em;
+}
+
+.small-cell {
+  font-size: 2em;
+  text-align: end;
+}
+
+/* CONTROLS */
+
+.controls {
+  display: flex;
+  gap: 1em;
+}
+
+.button {
+  font-size: medium;
+  font-weight: 600;
+  padding: 6px 12px;
+  border-radius: var(--border-radius);
+  border: var(--grid-cell-border);
+  background-color: var(--button-color);
+  color: white;
+  cursor: pointer;
+  flex-grow: 1;
 }

@@ -4,8 +4,6 @@
   "version": "1.0",
   "description": "Fck U Hamster",
   "icons": {
-    "16": "images/main.png",
-    "48": "images/main.png",
     "128": "images/main.png"
   },
   "permissions": [

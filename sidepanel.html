@@ -5,12 +5,25 @@
     <link rel="stylesheet" type="text/css" href="styles.css" />
   </head>
   <body>
-    <div id="priceFraction" class="price-fraction">-</div>
+    <div class="main">
+      <div class="upgrade-stats">
+        <div class="answer">
+          <div id="boostFraction" class="boost-fraction cell medium-cell">0</div>
+        </div>
+        <div class="parsed-text">
+          <div id="boostScraped" class="boost-scraped cell small-cell">0</div>
+          <div id="boostParsed" class="boost-parsed cell small-cell">0</div>
+          <div id="priceScraped" class="price-scraped cell small-cell">0</div>
+          <div id="priceParsed" class="price-parsed cell small-cell">0</div>
+        </div>
+      </div>
 
-    <button id="startButton">Start monitoring</button>
-    <!-- <button id="stopButton">Stop Clicking</button> -->
-
-    <button id="tapButton">TAP</button>
+      <div class="controls">
+        <button class="button" id="injectButton">Inject</button>
+        <button class="button" id="startButton">Start tick</button>
+        <button class="button" id="tapNowButton">Tap now!</button>
+      </div>
+    </div>
 
     <script src="sidepanel.js"></script>
   </body>
