@@ -1,3 +1,9 @@
+let currEnergy = 0;
+let maxEnergy = 1000;
+let autoTappingEnabled = false;
+let isTappingNow = false;
+let selectedEnergyThreshold = 200;
+
 const timerDisplayElem = document.getElementById('timerToTap');
 
 const bankDisplayElem = document.getElementById('bankDisplay');
@@ -9,14 +15,11 @@ const priceScrapedElem = document.getElementById('priceScraped');
 const priceParsedElem = document.getElementById('priceParsed');
 
 const injectButtonElem = document.getElementById('injectButton');
-const startButtonElem = document.getElementById('startButton');
 const tapNowButtonElem = document.getElementById('tapNowButton');
+const autoTapButtonElem = document.getElementById('autoTapButton');
 
-startButtonElem.disabled = true;
 tapNowButtonElem.disabled = true;
-
-let minutesRemaining = 0;
-let timerID = null;
+autoTapButtonElem.disabled = true;
 
 injectButtonElem.addEventListener('click', () => {
   chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
@@ -26,19 +29,22 @@ injectButtonElem.addEventListener('click', () => {
     });
   });
   injectButtonElem.disabled = true;
-  startButtonElem.disabled = false;
-});
-
-startButtonElem.addEventListener('click', () => {
-  chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-    chrome.tabs.sendMessage(tabs[0].id, { action: 'startScript' });
-  });
-  startButtonElem.disabled = true;
   tapNowButtonElem.disabled = false;
+  autoTapButtonElem.disabled = false;
 });
 
 tapNowButtonElem.addEventListener('click', () => {
-  sendTapOrder();
+  sendStartTappingMessage();
+});
+
+autoTapButtonElem.addEventListener('click', () => {
+  if (autoTappingEnabled) {
+    autoTappingEnabled = false;
+    autoTapButtonElem.textContent = 'Turn on autotap';
+  } else {
+    autoTappingEnabled = true;
+    autoTapButtonElem.textContent = 'Turn off autotap';
+  }
 });
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
@@ -51,9 +57,12 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       applyDigits(message.message?.upgradeDigits);
       break;
 
-    case 'energy':
-      minutesRemaining = pickATimeToTap(message.message?.energy);
-      startATimer();
+    case 'energyReadings':
+      tappingDecider(message.message?.energyReadings);
+      break;
+
+    case 'tapStopped':
+      restartTapping();
       break;
 
     default:
@@ -89,60 +98,63 @@ function parseDigits(str) {
   return null;
 }
 
-function pickATimeToTap(energyObj) {
-  const currEnergy = energyObj?.currEnergy;
-  const maxEnergy = energyObj?.maxEnergy;
-  const targetPercentage = normalDistribution(1, 99);
-  const targetEnergy = Math.round((targetPercentage / 100) * maxEnergy);
-  const energyRemaining = targetEnergy - currEnergy;
-  const minutesRemaining = Math.round(energyRemaining / 3 / 60);
-  console.log(currEnergy, maxEnergy, targetPercentage, targetEnergy, energyRemaining, minutesRemaining);
-  return minutesRemaining;
-}
+function tappingDecider(energyReadings) {
+  if (energyReadings) {
+    currEnergy = energyReadings.currEnergy;
+    maxEnergy = energyReadings.maxEnergy;
 
-function startATimer() {
-  minutesRemaining--;
-
-  if (timerID) {
-    clearInterval(timerID);
+    if (autoTappingEnabled && currEnergy >= selectedEnergyThreshold && !isTappingNow) {
+      isTappingNow = true;
+      sendStartTappingMessage();
+    }
   }
 
-  if (minutesRemaining < 0) {
-    sendTapOrder();
-  } else {
-    console.log(minutesRemaining, 'minutes remaining before tapping');
-    timerDisplayElem.textContent = String(minutesRemaining) + ' min.';
-    timerID = setTimeout(startATimer, 60000);
-  }
+  formatRemainingTime();
 }
 
-function sendTapOrder() {
+function sendStartTappingMessage() {
   chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
     chrome.tabs.sendMessage(tabs[0].id, { action: 'tapNow' });
   });
+}
+
+function formatRemainingTime() {
+  if (!autoTappingEnabled) {
+    timerDisplayElem.textContent = 'Autotapping inactive';
+  } else if (isTappingNow) {
+    timerDisplayElem.textContent = 'Tapping is in progress...';
+  } else {
+    const remainingEnergy = selectedEnergyThreshold - currEnergy;
+    const remainingTimeMin = Math.floor(remainingEnergy / 3 / 60);
+    const remainingTimeSec = Math.floor(remainingEnergy / 3 - remainingTimeMin * 60);
+    const time = `${remainingTimeMin}:${remainingTimeSec.toString().padStart(2, '0')}`;
+    timerDisplayElem.textContent = `About ${time} until ${selectedEnergyThreshold}`;
+  }
+}
+
+function restartTapping() {
+  selectedEnergyThreshold = normalDistribution(20, maxEnergy);
+  isTappingNow = false;
+}
+
+function normalDistribution(min, max) {
+  let u = 0;
+  let v = 0;
+  while (u === 0) u = Math.random();
+  while (v === 0) v = Math.random();
+  let num = Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v);
+  num = (num + 3) / 6;
+  num = min + num * (max - min);
+  return Math.min(Math.max(Math.round(num), min), max);
 }
 
 /// INJECTABLE /////////////////////////////////////////////////////////////////
 
 function mainInjectable() {
   let timeoutId;
-  let isTickRunning = false;
   let signalToStartTapping = false;
-  const buttonElem = document.querySelector('.user-tap-button');
-
-  const energyElem = document.querySelector('.user-tap-energy > p');
-  if (energyElem) {
-    const currEnergy = parseInt(energyElem.textContent.split('/')[0]);
-    const maxEnergy = parseInt(energyElem.textContent.split('/')[1]);
-    sendEnergyReadings(currEnergy, maxEnergy);
-  }
 
   chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-    if (message.action === 'startScript' && !isTickRunning) {
-      timeoutId = setTimeout(tick, 1000);
-      isTickRunning = true;
-    }
-
     if (message.action === 'tapNow') {
       signalToStartTapping = true;
     }
@@ -150,6 +162,13 @@ function mainInjectable() {
 
   function tick() {
     if (window.location.href.includes('hamsterkombatgame.io')) {
+      const energyElem = document.querySelector('.user-tap-energy > p');
+      if (energyElem) {
+        const currEnergy = parseInt(energyElem.textContent.split('/')[0]);
+        const maxEnergy = parseInt(energyElem.textContent.split('/')[1]);
+        sendEnergyReadings(currEnergy, maxEnergy);
+      }
+
       const bankElem = document.querySelector('.user-balance-large-inner > p');
       if (bankElem) {
         sendBankReadings(bankElem.textContent);
@@ -193,7 +212,9 @@ function mainInjectable() {
     const currEnergy = parseInt(energyElem.textContent.split('/')[0]);
     const maxEnergy = parseInt(energyElem.textContent.split('/')[1]);
 
-    if (currEnergy && currEnergy > 10) {
+    const buttonElem = document.querySelector('.user-tap-button');
+
+    if (currEnergy && currEnergy > 10 && buttonElem) {
       buttonElem.dispatchEvent(new PointerEvent('pointerup'));
       buttonElem.dispatchEvent(new PointerEvent('pointerup'));
       buttonElem.dispatchEvent(new PointerEvent('pointerup'));
@@ -201,16 +222,15 @@ function mainInjectable() {
 
       setTimeout(tap4times, 1000 / (6 + Math.random())); // примерно 6-7 нажатий в секунду
     } else {
-      signalToStartTapping = false;
-      sendEnergyReadings(currEnergy, maxEnergy);
+      sendTapStoppedMessage();
     }
   }
 
   function sendEnergyReadings(currEnergy, maxEnergy) {
     chrome.runtime.sendMessage({
-      action: 'energy',
+      action: 'energyReadings',
       message: {
-        energy: {
+        energyReadings: {
           currEnergy: currEnergy,
           maxEnergy: maxEnergy,
         },
@@ -226,15 +246,12 @@ function mainInjectable() {
       },
     });
   }
-}
 
-function normalDistribution(min, max) {
-  let u = 0;
-  let v = 0;
-  while (u === 0) u = Math.random();
-  while (v === 0) v = Math.random();
-  let num = Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v);
-  num = (num + 3) / 6;
-  num = min + num * (max - min);
-  return Math.min(Math.max(Math.round(num), min), max);
+  function sendTapStoppedMessage() {
+    chrome.runtime.sendMessage({
+      action: 'tapStopped',
+    });
+  }
+
+  timeoutId = setTimeout(tick, 1000);
 }
